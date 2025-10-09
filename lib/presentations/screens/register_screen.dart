@@ -169,6 +169,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Nombres',
                         prefixIcon: const Icon(Icons.person_outline),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa tu nombre';
+                        }
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -180,6 +185,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Apellidos',
                         prefixIcon: const Icon(Icons.person_outline),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa tus apellidos';
+                        }
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -192,6 +202,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Correo electrónico',
                         prefixIcon: const Icon(Icons.mail_outline_rounded),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa tu correo electrónico';
+                        }
+
+                        final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                        if (!emailRegex.hasMatch(value)) {
+                          return 'Por favor ingresa un correo electrónico válido';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -204,6 +225,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Teléfono',
                         prefixIcon: const Icon(Icons.phone_outlined),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa tu numero de telefono';
+                        }
+                        if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                          return 'El teléfono solo debe contener números';
+                        }
+                        if (value.length > 8) {
+                          return 'El teléfono no debe tener más de 8 dígitos';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -227,6 +260,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _careerValue = newValue;
                         });
                       },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Selecciona tu carrera";
+                        }
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -249,6 +287,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa una contraseña';
+                        }
+                        if (value.length < 6) {
+                          return 'La contraseña debe tener al menos 6 caracteres';
+                        }
+                        if (!RegExp(r'[0-9]').hasMatch(value)) {
+                          return 'La contraseña debe contener al menos un número';
+                        }
+                        if (value != _confirmPasswordController.text) {
+                          return 'Las contraseñas no coinciden';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -272,6 +325,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa una contraseña';
+                        }
+                        if (value.length < 6) {
+                          return 'La contraseña debe tener al menos 6 caracteres';
+                        }
+                        if (!RegExp(r'[0-9]').hasMatch(value)) {
+                          return 'La contraseña debe contener al menos un número';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'Las contraseñas no coinciden';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 30),
 
@@ -281,7 +349,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {
-                          print('Botón Registrarse presionado');
+                          if (_formKey.currentState!.validate()) {
+                            print('¡Validación de registro exitosa!');
+                            print('Nombres: ${_namesController.text}');
+                            print('Apellidos: ${_lastNamesController.text}');
+                            print('Email: ${_emailController.text}');
+                            print('Teléfono: ${_phoneController.text}');
+                            print('Carrera: $_careerValue');
+                            print('Contraseña: ${_passwordController.text}');
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Registrando usuario...'),
+                              ),
+                            );
+                          } else {
+                            print('El formulario de registro tiene errores.');
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
