@@ -1,4 +1,4 @@
-import 'package:aulas_disponibles/screens/login_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -13,7 +13,10 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Aulas Disponibles',
-      theme: ThemeData(primarySwatch: Colors.red, useMaterial3: true),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF660D04)),
+        useMaterial3: true,
+      ),
       home: const LoginScreen(),
     );
   }
