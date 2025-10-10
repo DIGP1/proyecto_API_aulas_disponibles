@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiRequest {
-  static const String baseUrl = 'http://';
+  static const String baseUrl = 'http://10.0.2.2:8000/api/';
   final http.Client client;
   ApiRequest({http.Client? client}) : client = client ?? http.Client();
 
@@ -15,14 +15,10 @@ class ApiRequest {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(request.toJson()),
     );
-    var data = jsonDecode(response.body)['data'];
+    print(response.body);
+    var data = jsonDecode(response.body);
     print("Datos del usuario: ${data}");
     if (response.statusCode == 200) {
-      if (data is Map<String, dynamic>) {
-        var id_proyect = data['id_proyecto_asignado'];
-        id_proyect ??= 0;
-        data['user']['id_proyecto_asignado'] = id_proyect;
-      }
       return User.fromJson(data);
     } else {
       if (response.statusCode == 401) {

@@ -1,44 +1,49 @@
 class User {
-  final int id_user;
+  final int id;
+  final String nombre_completo;
   final String email;
-  final int id_tipo_user;
-  final int estado_usuario;
-  final String fecha_registro;
+  final String telefono;
+  final int departamento_id;
+  final String estado;
+  final String ultimo_acceso;
   final String token;
-  final int id_proyecto;
 
   User({
-    required this.id_user,
+    required this.id,
+    required this.nombre_completo,
     required this.email,
-    required this.id_tipo_user,
-    required this.estado_usuario,
-    required this.fecha_registro,
+    required this.telefono,
+    required this.departamento_id,
+    required this.estado,
     required this.token,
-    required this.id_proyecto,
+    required this.ultimo_acceso,
   });
 
   // Método factory para crear una instancia de User desde la respuesta JSON
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id_user: json['estudiante_id'],
+      id: json['user']['id'],
+      nombre_completo: json['user']['nombre_completo'],
       email: json['user']['email'],
-      id_tipo_user: json['user']['id_tipo_usuario'],
-      estado_usuario: json['user']['estado_usuario'],
-      fecha_registro: json['user']['fecha_registro'],
+      telefono: json['user']['telefono'],
+      departamento_id: json['user']['departamento_id'],
+      estado: json['user']['estado'],
       token: json['token'],
-      id_proyecto: json['user']['id_proyecto_asignado'],
+      ultimo_acceso: json['user']['ultimo_acceso'],
     );
   }
 
   // Método para convertir User a JSON (útil si se necesitan guardar los datos localmente)
   Map<String, dynamic> toJson() {
     return {
-      'id_user': id_user,
+      'id': id,
+      'nombre_completo': nombre_completo,
       'email': email,
-      'id_tipo_user': id_tipo_user,
-      'estado_usuario': estado_usuario,
-      'fecha_registro': fecha_registro,
+      'telefono': telefono,
+      'departamento_id': departamento_id,
+      'estado': estado,
       'token': token,
+      'ultimo_acceso': ultimo_acceso,
     };
   }
 }

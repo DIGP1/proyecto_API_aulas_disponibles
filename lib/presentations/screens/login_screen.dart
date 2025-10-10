@@ -1,3 +1,5 @@
+import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
+import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/models/user_login.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final _formKey = GlobalKey<FormState>();
   user_login? _userLogin;
+  User? _user;
+  final ApiRequest _apiRequest = ApiRequest();
 
   @override
   void initState() {
@@ -231,21 +235,43 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState!.validate()) {
                                 String _correo1 = _emailController!.text
                                     .substring(0, 7)
-                                    .toUpperCase();
+                                    .toLowerCase();
                                 String _correo2 = _emailController!.text
                                     .substring(7)
                                     .toLowerCase();
                                 _userLogin = user_login(
                                   email: _correo1 + _correo2,
-                                  password: _passwordController!.text,
+                                  password: _passwordController.text,
                                 );
-                                print("Email: ${_userLogin!.email}");
-                                print("Password: ${_userLogin!.password}");
-                                print('Botón Iniciar Sesión presionado');
+                                _user = await _apiRequest.loginUser(
+                                  _userLogin!,
+                                  context,
+                                );
+                                if (_user != null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Inicio de sesión exitoso",
+                                        style: TextStyle(color: Colors.white),
+                                        textAlign: TextAlign.center,
+                                        textScaler: TextScaler.linear(1.5),
+                                      ),
+                                      backgroundColor: Color.fromARGB(
+                                        255,
+                                        31,
+                                        145,
+                                        35,
+                                      ),
+                                    ),
+                                  );
+                                  await Future.delayed(
+                                    const Duration(seconds: 2),
+                                  );
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(
