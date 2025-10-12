@@ -1,23 +1,25 @@
-import 'package:aulas_disponibles/presentations/screens/login_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/home.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'Aulas Disponibles',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF660D04)),
+        primaryColor: const Color(0xFF9C241C),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF9C241C)),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      // Tu pantalla de inicio va aquí
+      home: const HomeScreen(),
     );
   }
 }
