@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-class qr_scanner_screen extends StatefulWidget {
-  const qr_scanner_screen({super.key});
+class QrScannerScreen extends StatefulWidget {
+  const QrScannerScreen({super.key});
 
   @override
-  State<qr_scanner_screen> createState() => _qr_scanner_screenState();
+  State<QrScannerScreen> createState() => _QrScannerScreenState();
 }
 
-class _qr_scanner_screenState extends State<qr_scanner_screen>
+class _QrScannerScreenState extends State<QrScannerScreen>
     with WidgetsBindingObserver {
   final MobileScannerController cameraController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
@@ -74,7 +74,7 @@ class _qr_scanner_screenState extends State<qr_scanner_screen>
                 width: 260,
                 height: 260,
                 decoration: BoxDecoration(
-                  border: Border.all(width: 3),
+                  border: Border.all(color: const Color(0xFF9C241C), width: 3),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),

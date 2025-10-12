@@ -381,7 +381,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               final result = await Navigator.push<String?>(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const qr_scanner_screen(),
+                                  builder: (_) => const QrScannerScreen(),
                                 ),
                               );
                               if (result != null) {
