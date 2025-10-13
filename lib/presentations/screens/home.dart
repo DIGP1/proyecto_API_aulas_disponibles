@@ -1,9 +1,11 @@
 import 'package:aulas_disponibles/presentations/models/aula.dart';
 import 'package:aulas_disponibles/presentations/models/classroom_resources.dart';
+import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/screens/classroom_deteail_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/login_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/profile_screen.dart';
 import 'package:aulas_disponibles/presentations/screens/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
-import 'dart:math';
 
 // --- MODELO COMBINADO PARA LA UI ---
 class AulaConRecursos {
@@ -29,6 +31,19 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedStatus;
   double _minCapacity = 0;
   bool _searchByLocation = false;
+
+  final User currentUser = User(
+    id: 1,
+    nombre_completo: 'Diego Garcia',
+    email: 'diego.garcia@ues.edu.sv',
+    telefono: '+503 79403749',
+    departamento_id: 10,
+    estado: 'activo',
+    token: 'h',
+    ultimo_acceso: DateTime.now().toIso8601String(),
+    nombre_departamento: 'Ingenieria y Arquitectura',
+    nombre_role: 'Administrador',
+  );
 
   // --- LISTA DE DATOS DE PRUEBA ---
   final List<AulaConRecursos> originalAulas = [
@@ -234,24 +249,54 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1),
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.person_outline,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ir a ver perfil...')),
-                    );
-                  },
-                ),
-              ),
+              (currentUser.token.isNotEmpty)
+                  ? Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.person_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfileScreen(user: currentUser),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          side: const BorderSide(color: Colors.white),
+                        ),
+                      ),
+                      child: const Text(
+                        'Iniciar Sesión',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
             ],
           ),
           const SizedBox(height: 16),

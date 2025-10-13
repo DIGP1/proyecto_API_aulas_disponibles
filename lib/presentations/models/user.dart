@@ -7,6 +7,8 @@ class User {
   final String estado;
   final String ultimo_acceso;
   final String token;
+  final String nombre_departamento;
+  final String nombre_role;
 
   User({
     required this.id,
@@ -17,6 +19,8 @@ class User {
     required this.estado,
     required this.token,
     required this.ultimo_acceso,
+    required this.nombre_departamento,
+    required this.nombre_role,
   });
 
   // Método factory para crear una instancia de User desde la respuesta JSON
@@ -30,6 +34,8 @@ class User {
       estado: json['user']['estado'],
       token: json['token'],
       ultimo_acceso: json['user']['ultimo_acceso'],
+      nombre_departamento: json['user']['nombre_departamento'],
+      nombre_role: json['user']['nombre_role'],
     );
   }
 
@@ -44,6 +50,8 @@ class User {
       'estado': estado,
       'token': token,
       'ultimo_acceso': ultimo_acceso,
+      'nombre_departamento': nombre_departamento,
+      'nombre_role': nombre_role,
     };
   }
 }
