@@ -19,7 +19,6 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -43,7 +42,6 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   @override
   void dispose() {
-    // TODO: implement dispose
     WidgetsBinding.instance.removeObserver(this);
     cameraController.dispose();
     super.dispose();
@@ -63,24 +61,46 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          MobileScanner(controller: cameraController, onDetect: _onDetect),
-          // Marco visual opcional
-          IgnorePointer(
-            child: Center(
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF9C241C), width: 3),
-                  borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onHorizontalDragEnd: (DragEndDetails details) {
+        if (details.primaryVelocity != null && details.primaryVelocity! > 100) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            MobileScanner(controller: cameraController, onDetect: _onDetect),
+
+            IgnorePointer(
+              child: Center(
+                child: Container(
+                  width: 260,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFF9C241C),
+                      width: 3,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            // Botón para regresar
+            Positioned(
+              top: 40,
+              left: 16,
+              child: CircleAvatar(
+                backgroundColor: Colors.black.withOpacity(0.5),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

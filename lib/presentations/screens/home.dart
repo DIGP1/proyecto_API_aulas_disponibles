@@ -1,7 +1,9 @@
 import 'package:aulas_disponibles/presentations/models/aula.dart';
 import 'package:aulas_disponibles/presentations/models/classroom_resources.dart';
+import 'package:aulas_disponibles/presentations/screens/classroom_deteail_screen.dart';
 import 'package:aulas_disponibles/presentations/screens/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
+import 'dart:math';
 
 // --- MODELO COMBINADO PARA LA UI ---
 class AulaConRecursos {
@@ -23,6 +25,11 @@ class _HomeScreenState extends State<HomeScreen> {
   late TextEditingController _searchController;
   late List<AulaConRecursos> aulasMostradas;
 
+  // --- Variables de Estado para los Filtros ---
+  String? _selectedStatus;
+  double _minCapacity = 0;
+  bool _searchByLocation = false;
+
   // --- LISTA DE DATOS DE PRUEBA ---
   final List<AulaConRecursos> originalAulas = [
     AulaConRecursos(
@@ -34,8 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ubicacion: 'Edificio Minerva, Nivel 1',
         qrCode: 'QR1',
         estado: 'disponible',
-        createdAt: '',
-        updatedAt: '',
+        createdAt: DateTime.now().toIso8601String(),
+        updatedAt: DateTime.now().toIso8601String(),
       ),
       recursos: [
         ClassroomResources(
@@ -66,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
         capacidadPupitres: 25,
         ubicacion: 'Edificio de Ingeniería, Nivel 2',
         qrCode: 'QR2',
-        estado: 'ocupado',
+        estado: 'inactiva',
         createdAt: '',
         updatedAt: '',
       ),
@@ -92,19 +99,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchController.addListener(_filterAulas);
   }
 
+  // --- Función de Filtro Actualizada ---
   void _filterAulas() {
-    final query = _searchController.text;
+    final query = _searchController.text.toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        aulasMostradas = originalAulas;
-      } else {
-        aulasMostradas = originalAulas
-            .where(
-              (item) =>
-                  item.aula.nombre.toLowerCase().contains(query.toLowerCase()),
-            )
-            .toList();
-      }
+      aulasMostradas = originalAulas.where((item) {
+        // Filtro por texto de búsqueda (nombre/código o ubicación)
+        final searchMatch =
+            query.isEmpty ||
+            (_searchByLocation
+                ? item.aula.ubicacion.toLowerCase().contains(query)
+                : (item.aula.nombre.toLowerCase().contains(query) ||
+                      item.aula.codigo.toLowerCase().contains(query)));
+
+        // Filtro por estado
+        final statusMatch =
+            _selectedStatus == null || item.aula.estado == _selectedStatus;
+
+        // Filtro por capacidad
+        final capacityMatch = item.aula.capacidadPupitres >= _minCapacity;
+
+        // Devuelve true solo si todos los filtros coinciden
+        return searchMatch && statusMatch && capacityMatch;
+      }).toList();
     });
   }
 
@@ -113,6 +130,39 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchController.removeListener(_filterAulas);
     _searchController.dispose();
     super.dispose();
+  }
+
+  // --- Función para mostrar el panel de filtros ---
+  void _showFilterPanel() {
+    // Calcula la capacidad máxima para el slider
+    final maxCap = 150.0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: FilterBottomSheet(
+            currentStatus: _selectedStatus,
+            currentCapacity: _minCapacity,
+            currentSearchByLocation: _searchByLocation,
+            maxCapacity: maxCap,
+            onApplyFilters: (status, capacity, searchByLocation) {
+              setState(() {
+                _selectedStatus = status;
+                _minCapacity = capacity;
+                _searchByLocation = searchByLocation;
+              });
+              _filterAulas(); // Aplica los filtros
+              Navigator.pop(context);
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -133,20 +183,20 @@ class _HomeScreenState extends State<HomeScreen> {
             context,
             MaterialPageRoute(builder: (context) => const QrScannerScreen()),
           );
+
           if (qrCode != null && qrCode.isNotEmpty) {
-            // Aquí puedes buscar el aula o hacer lo que necesites con el código QR
-            //_searchController.text = qrCode;
+            _searchController.text = qrCode;
             ScaffoldMessenger.of(context)
               ..removeCurrentSnackBar()
               ..showSnackBar(
-                SnackBar(content: Text('Código QR escaneado: $qrCode')),
+                SnackBar(content: Text('Buscando aula con código: $qrCode')),
               );
           }
         },
         backgroundColor: const Color(0xFF9C241C),
         child: const Icon(Icons.qr_code_scanner, color: Colors.white),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -205,7 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // --- SOLUCIÓN: Envolver la barra de búsqueda con un widget Material ---
           Material(
             color: Colors.transparent,
             child: Container(
@@ -222,7 +271,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: 'Buscar un aula por nombre...',
+                        hintText: _searchByLocation
+                            ? 'Buscar por ubicación...'
+                            : 'Buscar por nombre o código...',
                         hintStyle: TextStyle(color: Colors.grey[600]),
                         border: InputBorder.none,
                       ),
@@ -230,11 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.tune, color: Color(0xFF9C241C)),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Abrir filtros...')),
-                      );
-                    },
+                    onPressed: _showFilterPanel, // Llama al panel de filtros
                   ),
                 ],
               ),
@@ -256,6 +303,16 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildClassroomList(BuildContext context) {
+    if (aulasMostradas.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Text(
+            'No se encontraron resultados para los filtros aplicados.',
+          ),
+        ),
+      );
+    }
     return ListView(
       padding: const EdgeInsets.only(top: 8),
       children: [
@@ -266,113 +323,103 @@ class HomeContent extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
-        if (aulasMostradas.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Text('No se encontraron resultados.'),
-            ),
-          )
-        else
-          ...aulasMostradas.map((item) {
-            final aula = item.aula;
-            final recursos = item.recursos;
+        ...aulasMostradas.map((item) {
+          final aula = item.aula;
+          final recursos = item.recursos;
 
-            return GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Viendo: ${aula.nombre}')),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ClassroomDetailScreen(aulaConRecursos: item),
                 ),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF9C241C).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.class_outlined,
-                            color: Color(0xFF9C241C),
-                          ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9C241C).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      aula.nombre,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                        child: const Icon(
+                          Icons.class_outlined,
+                          color: Color(0xFF9C241C),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    aula.nombre,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  _buildAulaStatusTag(aula.estado),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              _buildInfoRow(
-                                Icons.location_on_outlined,
-                                aula.ubicacion,
-                              ),
-                              const SizedBox(height: 4),
-                              _buildInfoRow(
-                                Icons.people_alt_outlined,
-                                '${aula.capacidadPupitres} pupitres',
-                              ),
-                            ],
-                          ),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildAulaStatusTag(aula.estado),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                              Icons.location_on_outlined,
+                              aula.ubicacion,
+                            ),
+                            const SizedBox(height: 4),
+                            _buildInfoRow(
+                              Icons.people_alt_outlined,
+                              '${aula.capacidadPupitres} pupitres',
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const Divider(height: 24, thickness: 1),
-                    const Text(
-                      'Recursos del Aula:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...recursos
-                        .map((recurso) => _buildResourceRow(recurso))
-                        .toList(),
-                  ],
-                ),
+                    ],
+                  ),
+                  const Divider(height: 24, thickness: 1),
+                  const Text(
+                    'Recursos del Aula:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  ...recursos
+                      .map((recurso) => _buildResourceRow(recurso))
+                      .toList(),
+                ],
               ),
-            );
-          }).toList(),
+            ),
+          );
+        }).toList(),
       ],
     );
   }
@@ -404,11 +451,19 @@ class HomeContent extends StatelessWidget {
         text = 'Disponible';
         icon = Icons.check_circle_outline;
         break;
-      case 'ocupado':
+      case 'ocupada':
         color = Colors.red;
         text = 'Ocupado';
         icon = Icons.cancel_outlined;
         break;
+      case 'mantenimiento':
+        color = Colors.orange;
+        text = 'Mantenimiento';
+        icon = Icons.settings_suggest_outlined;
+      case 'inactiva':
+        color = Colors.grey;
+        text = 'Inactiva';
+        icon = Icons.block_outlined;
       default:
         color = Colors.grey;
         text = 'Desconocido';
@@ -496,6 +551,170 @@ class HomeContent extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+  }
+}
+
+// --- Widget para el Panel de Filtros ---
+class FilterBottomSheet extends StatefulWidget {
+  final String? currentStatus;
+  final double currentCapacity;
+  final bool currentSearchByLocation;
+  final double maxCapacity;
+  final Function(String?, double, bool) onApplyFilters;
+
+  const FilterBottomSheet({
+    Key? key,
+    required this.currentStatus,
+    required this.currentCapacity,
+    required this.currentSearchByLocation,
+    required this.maxCapacity,
+    required this.onApplyFilters,
+  }) : super(key: key);
+
+  @override
+  _FilterBottomSheetState createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<FilterBottomSheet> {
+  late String? _status;
+  late double _capacity;
+  late bool _searchByLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.currentStatus;
+    _capacity = widget.currentCapacity;
+    _searchByLocation = widget.currentSearchByLocation;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Filtros', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 20),
+
+          // Filtro por Estado
+          const Text('Estado', style: TextStyle(fontWeight: FontWeight.bold)),
+          Wrap(
+            spacing: 8.0,
+            children: [
+              ChoiceChip(
+                label: const Text('Disponible'),
+                selected: _status == 'disponible',
+                onSelected: (selected) {
+                  setState(() {
+                    _status = selected ? 'disponible' : null;
+                  });
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Ocupada'),
+                selected: _status == 'ocupada',
+                onSelected: (selected) {
+                  setState(() {
+                    _status = selected ? 'ocupada' : null;
+                  });
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Mantenimiento'),
+                selected: _status == 'mantenimiento',
+                onSelected: (selected) {
+                  setState(() {
+                    _status = selected ? 'mantenimiento' : null;
+                  });
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Inactiva'),
+                selected: _status == 'inactiva',
+                onSelected: (selected) {
+                  setState(() {
+                    _status = selected ? 'inactiva' : null;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Filtro por Capacidad
+          Text(
+            'Capacidad Mínima: ${_capacity.toInt()}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Slider(
+            value: _capacity,
+            min: 0,
+            max: widget.maxCapacity,
+            divisions: widget.maxCapacity.toInt(),
+            label: _capacity.round().toString(),
+            onChanged: (double value) {
+              setState(() {
+                _capacity = value;
+              });
+            },
+          ),
+          const SizedBox(height: 10),
+
+          // Filtro por tipo de búsqueda
+          SwitchListTile(
+            title: const Text(
+              'Buscar por Ubicación',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            value: _searchByLocation,
+            onChanged: (bool value) {
+              setState(() {
+                _searchByLocation = value;
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Botones de Acción
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    // Limpia los filtros y aplica
+                    widget.onApplyFilters(null, 0, false);
+                  },
+                  child: const Text('Limpiar'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onApplyFilters(
+                      _status,
+                      _capacity,
+                      _searchByLocation,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF9C241C),
+                  ),
+                  child: const Text(
+                    'Aplicar Filtros',
+                    style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }
