@@ -1,27 +1,80 @@
-import 'package:aulas_disponibles/presentations/screens/home.dart';
+import 'dart:convert';
+import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
+import 'package:aulas_disponibles/presentations/models/aula.dart';
+import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ClassroomDetailScreen extends StatelessWidget {
-  final AulaConRecursos aulaConRecursos;
+class ClassroomDetailScreen extends StatefulWidget {
+  final Aula aula;
 
-  const ClassroomDetailScreen({Key? key, required this.aulaConRecursos})
-    : super(key: key);
+  const ClassroomDetailScreen({Key? key, required this.aula}) : super(key: key);
+
+  @override
+  State<ClassroomDetailScreen> createState() => _ClassroomDetailScreenState();
+}
+
+class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
+  final ApiRequest _apiRequest = ApiRequest();
+  late Aula _currentAula;
+  User? _currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentAula = widget.aula;
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString('currentUser');
+    if (userJson != null) {
+      if (!mounted) return;
+      setState(() {
+        _currentUser = User.fromJson(jsonDecode(userJson));
+      });
+    }
+  }
+
+  Future<void> _refreshClassroom() async {
+    if (_currentUser?.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo autenticar para refrescar.')),
+      );
+      return;
+    }
+
+    final refreshedAula = await _apiRequest.getClassroomById(
+      _currentAula.id,
+      _currentUser!.token,
+    );
+
+    if (refreshedAula != null && mounted) {
+      setState(() {
+        _currentAula = refreshedAula;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al actualizar los datos del aula.'),
+        ),
+      );
+    }
+  }
 
   String _getTimeAgo(String dateString) {
-    if (dateString.isEmpty) return '';
-
+    if (dateString.isEmpty) return 'no disponible';
     try {
       final date = DateTime.parse(dateString);
       final now = DateTime.now();
       final difference = now.difference(date);
 
-      if (difference.inSeconds < 5) {
-        return 'justo ahora';
-      } else if (difference.inMinutes < 1) {
+      if (difference.inSeconds < 5) return 'justo ahora';
+      if (difference.inMinutes < 1)
         return 'hace ${difference.inSeconds} segundos';
-      } else if (difference.inHours < 1) {
-        return 'hace ${difference.inMinutes} minutos';
-      } else if (difference.inDays < 1) {
+      if (difference.inHours < 1) return 'hace ${difference.inMinutes} minutos';
+      if (difference.inDays < 1) {
         final hours = difference.inHours;
         final minutes = difference.inMinutes % 60;
         return 'hace ${hours}h y ${minutes}m';
@@ -37,12 +90,11 @@ class ClassroomDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aula = aulaConRecursos.aula;
-    final recursos = aulaConRecursos.recursos;
-    final bool isReservable = aula.estado.toLowerCase() == 'disponible';
+    final recursos = _currentAula.recursos;
+    final bool isReservable = _currentAula.estado.toLowerCase() == 'disponible';
 
     String buttonText;
-    switch (aula.estado.toLowerCase()) {
+    switch (_currentAula.estado.toLowerCase()) {
       case 'disponible':
         buttonText = 'Reservar Aula';
         break;
@@ -67,7 +119,6 @@ class ClassroomDetailScreen extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          // --- MODIFICACIÓN: Título genérico en AppBar ---
           title: const Text(
             'Detalles del Aula',
             style: TextStyle(color: Colors.white),
@@ -81,7 +132,7 @@ class ClassroomDetailScreen extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Reportar un problema con el ${aula.nombre}...',
+                      'Reportar un problema con el ${_currentAula.nombre}...',
                     ),
                   ),
                 );
@@ -89,128 +140,148 @@ class ClassroomDetailScreen extends StatelessWidget {
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAvailabilityBanner(aula.estado),
-                const SizedBox(height: 24),
-                Text(
-                  'Información General',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        body: RefreshIndicator(
+          onRefresh: _refreshClassroom,
+          color: const Color(0xFF9C241C),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAvailabilityBanner(_currentAula.estado),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Información General',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        // --- MODIFICACIÓN: Añadir nombre del aula a la tarjeta ---
-                        _buildInfoRow(
-                          Icons.class_outlined,
-                          'Nombre',
-                          aula.nombre,
-                        ),
-                        const Divider(),
-                        _buildInfoRow(Icons.qr_code, 'Código', aula.codigo),
-                        const Divider(),
-                        _buildInfoRow(
-                          Icons.location_on_outlined,
-                          'Ubicación',
-                          aula.ubicacion,
-                        ),
-                        const Divider(),
-                        _buildInfoRow(
-                          Icons.people_alt_outlined,
-                          'Capacidad',
-                          '${aula.capacidadPupitres} pupitres',
-                        ),
-                        if (aula.updatedAt.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          _buildInfoRow(
+                            Icons.class_outlined,
+                            'Nombre',
+                            _currentAula.nombre,
+                          ),
                           const Divider(),
                           _buildInfoRow(
-                            Icons.update,
-                            'Actualizado',
-                            _getTimeAgo(aula.updatedAt),
+                            Icons.qr_code,
+                            'Código',
+                            _currentAula.codigo,
                           ),
+                          const Divider(),
+                          _buildInfoRow(
+                            Icons.location_on_outlined,
+                            'Ubicación',
+                            _currentAula.ubicacion,
+                          ),
+                          const Divider(),
+                          _buildInfoRow(
+                            Icons.people_alt_outlined,
+                            'Capacidad',
+                            '${_currentAula.capacidadPupitres} pupitres',
+                          ),
+                          if (_currentAula.updatedAt.isNotEmpty) ...[
+                            const Divider(),
+                            _buildInfoRow(
+                              Icons.update,
+                              'Actualizado',
+                              _getTimeAgo(_currentAula.updatedAt),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Recursos del Aula',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Recursos del Aula',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: recursos.map((recurso) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // --- MODIFICACIÓN: Mostrar cantidad de recursos ---
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            recurso.recursoTipoNombre,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: recursos.isEmpty
+                            ? [
+                                const Text(
+                                  'No hay recursos asignados a esta aula.',
+                                ),
+                              ]
+                            : recursos.map((recurso) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10.0,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    recurso.nombre,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Cant: ${recurso.cantidad}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                        ),
-                                        Text(
-                                          'Cant: ${recurso.recursoCantidad}',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (recurso.observaciones.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        recurso.observaciones,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade700,
+                                            if (recurso
+                                                .observaciones
+                                                .isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                recurso.observaciones,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
+                                      const SizedBox(width: 16),
+                                      _buildResourceStatusTag(recurso.estado),
                                     ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              _buildResourceStatusTag(recurso.estado),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                                  ),
+                                );
+                              }).toList(),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -222,7 +293,9 @@ class ClassroomDetailScreen extends StatelessWidget {
                   ? () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Reservando el ${aula.nombre}...'),
+                          content: Text(
+                            'Reservando el ${_currentAula.nombre}...',
+                          ),
                         ),
                       );
                     }
@@ -337,9 +410,13 @@ class ClassroomDetailScreen extends StatelessWidget {
         color = Colors.orange;
         text = 'Regular';
         break;
-      default:
+      case 'malo':
         color = Colors.red;
         text = 'Malo';
+        break;
+      default:
+        color = Colors.blueGrey;
+        text = status;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

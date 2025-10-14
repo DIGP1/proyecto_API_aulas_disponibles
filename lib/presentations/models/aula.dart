@@ -1,3 +1,5 @@
+import 'package:aulas_disponibles/presentations/models/classroom_resources.dart';
+
 class Aula {
   final int id;
   final String codigo;
@@ -6,6 +8,7 @@ class Aula {
   final String ubicacion;
   final String qrCode;
   final String estado;
+  final List<ClassroomResources> recursos;
   final String createdAt;
   final String updatedAt;
 
@@ -17,22 +20,29 @@ class Aula {
     required this.ubicacion,
     required this.qrCode,
     required this.estado,
+    required this.recursos,
     required this.createdAt,
     required this.updatedAt,
   });
 
   // Método factory para crear una instancia de Aula desde la respuesta JSON
   factory Aula.fromJson(Map<String, dynamic> json) {
+    var recursosList = json['recursos'] as List? ?? [];
+    List<ClassroomResources> recursos = recursosList
+        .map((recursoJson) => ClassroomResources.fromJson(recursoJson))
+        .toList();
+
     return Aula(
-      id: json['id'],
-      codigo: json['codigo'],
-      nombre: json['nombre'],
-      capacidadPupitres: json['capacidad_pupitres'],
-      ubicacion: json['ubicacion'],
-      qrCode: json['qr_code'],
-      estado: json['estado'],
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
+      id: json['id'] ?? 0,
+      codigo: json['codigo'] ?? '',
+      nombre: json['nombre'] ?? '',
+      capacidadPupitres: json['capacidad_pupitres'] ?? 0,
+      ubicacion: json['ubicacion'] ?? '',
+      qrCode: json['qr_code'] ?? '',
+      estado: json['estado'] ?? 'desconocido',
+      recursos: recursos,
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
     );
   }
 
@@ -46,6 +56,7 @@ class Aula {
       'ubicacion': ubicacion,
       'qr_code': qrCode,
       'estado': estado,
+      'recursos': recursos.map((recurso) => recurso.toJson()).toList(),
       'created_at': createdAt,
       'updated_at': updatedAt,
     };

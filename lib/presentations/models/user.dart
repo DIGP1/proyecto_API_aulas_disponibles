@@ -23,23 +23,26 @@ class User {
     required this.nombre_role,
   });
 
-  // Método factory para crear una instancia de User desde la respuesta JSON
   factory User.fromJson(Map<String, dynamic> json) {
+    final bool isApiStructure = json.containsKey('user') && json['user'] is Map;
+
+    final userData = isApiStructure
+        ? json['user'] as Map<String, dynamic>
+        : json;
+
     return User(
-      id: json['user']['id'],
-      nombre_completo: json['user']['nombre_completo'],
-      email: json['user']['email'],
-      telefono: json['user']['telefono'],
-      departamento_id: json['user']['departamento_id'],
-      estado: json['user']['estado'],
-      token: json['token'],
-      ultimo_acceso: json['user']['ultimo_acceso'],
-      nombre_departamento: json['user']['nombre_departamento'],
-      nombre_role: json['user']['nombre_role'],
+      token: json['token'] ?? '',
+      id: userData['id'] ?? 0,
+      nombre_completo: userData['nombre_completo'] ?? '',
+      email: userData['email'] ?? '',
+      telefono: userData['telefono'] ?? '',
+      departamento_id: userData['departamento_id'] ?? 0,
+      estado: userData['estado'] ?? 'inactivo',
+      ultimo_acceso: userData['ultimo_acceso'] ?? '',
+      nombre_departamento: userData['departamento_nombre'] ?? 'No especificado',
+      nombre_role: userData['role_nombre'] ?? 'Invitado',
     );
   }
-
-  // Método para convertir User a JSON (útil si se necesitan guardar los datos localmente)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -50,8 +53,8 @@ class User {
       'estado': estado,
       'token': token,
       'ultimo_acceso': ultimo_acceso,
-      'nombre_departamento': nombre_departamento,
-      'nombre_role': nombre_role,
+      'departamento_nombre': nombre_departamento,
+      'role_nombre': nombre_role,
     };
   }
 }
