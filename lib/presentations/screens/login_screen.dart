@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/models/user_login.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:aulas_disponibles/presentations/screens/register_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -44,6 +47,12 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _saveUser(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = jsonEncode(user.toJson());
+    await prefs.setString('currentUser', userJson);
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = const Color(0xFF9C241C);
@@ -56,13 +65,18 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       },
       child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFFFFFF),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Color(0xFF9C241C)),
+        ),
+        extendBodyBehindAppBar: true,
         key: scaffoldKey,
-        backgroundColor: Colors.white,
-        body: Stack(
-          children: [
-            SafeArea(
-              top: true,
-              child: SingleChildScrollView(
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 15.0,
@@ -269,9 +283,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                       );
+                                      _saveUser(_user!);
                                       await Future.delayed(
                                         const Duration(seconds: 2),
                                       );
+                                      Navigator.pop(context, true);
                                     }
                                   }
                                 },
@@ -314,19 +330,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              top: 40,
-              left: 16,
-              child: CircleAvatar(
-                backgroundColor: primaryColor,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

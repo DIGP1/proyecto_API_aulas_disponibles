@@ -48,6 +48,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     final refreshedAula = await _apiRequest.getClassroomById(
       _currentAula.id,
       _currentUser!.token,
+      context,
     );
 
     if (refreshedAula != null && mounted) {
@@ -98,7 +99,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
       case 'disponible':
         buttonText = 'Reservar Aula';
         break;
-      case 'ocupado':
+      case 'ocupada':
         buttonText = 'Aula Ocupada';
         break;
       case 'mantenimiento':
@@ -140,182 +141,186 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
             ),
           ],
         ),
-        body: RefreshIndicator(
-          onRefresh: _refreshClassroom,
-          color: const Color(0xFF9C241C),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildAvailabilityBanner(_currentAula.estado),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Información General',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _refreshClassroom,
+            color: const Color(0xFF9C241C),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAvailabilityBanner(_currentAula.estado),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Información General',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          _buildInfoRow(
-                            Icons.class_outlined,
-                            'Nombre',
-                            _currentAula.nombre,
-                          ),
-                          const Divider(),
-                          _buildInfoRow(
-                            Icons.qr_code,
-                            'Código',
-                            _currentAula.codigo,
-                          ),
-                          const Divider(),
-                          _buildInfoRow(
-                            Icons.location_on_outlined,
-                            'Ubicación',
-                            _currentAula.ubicacion,
-                          ),
-                          const Divider(),
-                          _buildInfoRow(
-                            Icons.people_alt_outlined,
-                            'Capacidad',
-                            '${_currentAula.capacidadPupitres} pupitres',
-                          ),
-                          if (_currentAula.updatedAt.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            _buildInfoRow(
+                              Icons.class_outlined,
+                              'Nombre',
+                              _currentAula.nombre,
+                            ),
                             const Divider(),
                             _buildInfoRow(
-                              Icons.update,
-                              'Actualizado',
-                              _getTimeAgo(_currentAula.updatedAt),
+                              Icons.qr_code,
+                              'Código',
+                              _currentAula.codigo,
                             ),
+                            const Divider(),
+                            _buildInfoRow(
+                              Icons.location_on_outlined,
+                              'Ubicación',
+                              _currentAula.ubicacion,
+                            ),
+                            const Divider(),
+                            _buildInfoRow(
+                              Icons.people_alt_outlined,
+                              'Capacidad',
+                              '${_currentAula.capacidadPupitres} pupitres',
+                            ),
+                            if (_currentAula.updatedAt.isNotEmpty) ...[
+                              const Divider(),
+                              _buildInfoRow(
+                                Icons.update,
+                                'Actualizado',
+                                _getTimeAgo(_currentAula.updatedAt),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Recursos del Aula',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Recursos del Aula',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: recursos.isEmpty
-                            ? [
-                                const Text(
-                                  'No hay recursos asignados a esta aula.',
-                                ),
-                              ]
-                            : recursos.map((recurso) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10.0,
+                    const SizedBox(height: 8),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: recursos.isEmpty
+                              ? [
+                                  const Text(
+                                    'No hay recursos asignados a esta aula.',
                                   ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    recurso.nombre,
-                                                    style: const TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w500,
+                                ]
+                              : recursos.map((recurso) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10.0,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      recurso.nombre,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
+                                                  Text(
+                                                    'Cant: ${recurso.cantidad}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.black54,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (recurso
+                                                  .observaciones
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 4),
                                                 Text(
-                                                  'Cant: ${recurso.cantidad}',
-                                                  style: const TextStyle(
+                                                  recurso.observaciones,
+                                                  style: TextStyle(
                                                     fontSize: 14,
-                                                    color: Colors.black54,
+                                                    color: Colors.grey.shade700,
                                                   ),
                                                 ),
                                               ],
-                                            ),
-                                            if (recurso
-                                                .observaciones
-                                                .isNotEmpty) ...[
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                recurso.observaciones,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey.shade700,
-                                                ),
-                                              ),
                                             ],
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      _buildResourceStatusTag(recurso.estado),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
+                                        const SizedBox(width: 16),
+                                        _buildResourceStatusTag(recurso.estado),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: isReservable
-                  ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Reservando el ${_currentAula.nombre}...',
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isReservable
-                    ? const Color(0xFF9C241C)
-                    : Colors.grey,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  ],
                 ),
               ),
-              child: Text(
-                buttonText,
-                style: const TextStyle(fontSize: 18, color: Colors.white),
-              ),
             ),
           ),
         ),
+        bottomNavigationBar: _currentUser?.nombre_departamento != 'Guest'
+            ? SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ElevatedButton(
+                    onPressed: isReservable
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Reservando el ${_currentAula.nombre}...',
+                                ),
+                              ),
+                            );
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isReservable
+                          ? const Color(0xFF9C241C)
+                          : Colors.grey,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: Text(
+                      buttonText,
+                      style: const TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+              )
+            : null,
       ),
     );
   }
@@ -331,7 +336,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
         text = 'DISPONIBLE';
         icon = Icons.check_circle_outline;
         break;
-      case 'ocupado':
+      case 'ocupada':
         color = Colors.red;
         text = 'OCUPADO';
         icon = Icons.cancel_outlined;

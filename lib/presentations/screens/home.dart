@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/aula.dart';
 import 'package:aulas_disponibles/presentations/models/classroom_resources.dart';
@@ -8,7 +9,6 @@ import 'package:aulas_disponibles/presentations/screens/login_screen.dart';
 import 'package:aulas_disponibles/presentations/screens/profile_screen.dart';
 import 'package:aulas_disponibles/presentations/screens/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
-import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -40,6 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadInitialData();
   }
 
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterAulas);
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveUser(User user) async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = jsonEncode(user.toJson());
@@ -47,35 +54,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _hasError = false;
     });
 
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString('currentUser');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('currentUser');
 
-    if (userJson != null) {
-      _currentUser = User.fromJson(jsonDecode(userJson));
-    } else {
-      _currentUser = await _apiRequest.loginAsGuest();
-      if (_currentUser != null) {
-        await _saveUser(_currentUser!);
-      }
-    }
-
-    if (_currentUser?.token.isNotEmpty ?? false) {
-      final aulas = await _apiRequest.getAllClassrooms(_currentUser!.token);
-      if (!mounted) return;
-      setState(() {
-        _originalAulas = aulas;
-        _aulasMostradas = aulas;
-        _isLoading = false;
-        if (aulas.isEmpty) {
-          _hasError = true;
+      if (userJson != null) {
+        _currentUser = User.fromJson(jsonDecode(userJson));
+      } else {
+        _currentUser = await _apiRequest.loginAsGuest();
+        if (_currentUser != null) {
+          await _saveUser(_currentUser!);
         }
-      });
-    } else {
+      }
+
+      if (_currentUser?.token.isNotEmpty ?? false) {
+        final aulas = await _apiRequest.getAllClassrooms(_currentUser!.token);
+        if (!mounted) return;
+        setState(() {
+          _originalAulas = aulas;
+          _aulasMostradas = aulas;
+          _isLoading = false;
+          _hasError = false; // Asegurarse de que el error se limpie
+        });
+      } else {
+        throw Exception('No se pudo obtener un token de autenticación.');
+      }
+    } catch (e) {
+      print("Error en _loadInitialData: $e");
       if (!mounted) return;
       setState(() {
         _hasError = true;
@@ -85,20 +96,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refreshData() async {
-    if (_currentUser?.token.isNotEmpty ?? false) {
-      final aulas = await _apiRequest.getAllClassrooms(_currentUser!.token);
-      if (!mounted) return;
+    // Esta función es para el pull-to-refresh, no debe mostrar la pantalla de carga completa
+    try {
+      if (_currentUser?.token.isNotEmpty ?? false) {
+        final aulas = await _apiRequest.getAllClassrooms(_currentUser!.token);
+        if (!mounted) return;
 
-      setState(() {
-        _originalAulas = aulas;
-        _aulasMostradas = aulas;
-        _hasError = aulas.isEmpty;
-        _searchController.clear();
-        _selectedStatus = null;
-        _minCapacity = 0;
-      });
-    } else {
-      await _loadInitialData();
+        setState(() {
+          _originalAulas = aulas;
+          _aulasMostradas = aulas;
+          _hasError = false;
+          _searchController.clear();
+          _selectedStatus = null;
+          _minCapacity = 0;
+        });
+      } else {
+        await _loadInitialData();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al refrescar. Intente más tarde.')),
+      );
     }
   }
 
@@ -118,13 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return searchMatch && statusMatch && capacityMatch;
       }).toList();
     });
-  }
-
-  @override
-  void dispose() {
-    _searchController.removeListener(_filterAulas);
-    _searchController.dispose();
-    super.dispose();
   }
 
   void _showFilterPanel() {
@@ -162,69 +173,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshData,
-                color: const Color(0xFF9C241C),
-                child: _buildBody(),
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final String? qrCode = await Navigator.push<String>(
-            context,
-            MaterialPageRoute(builder: (context) => const QrScannerScreen()),
-          );
-          if (qrCode != null && qrCode.isNotEmpty) {
-            _searchController.text = qrCode;
-          }
-        },
-        backgroundColor: const Color(0xFF9C241C),
-        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Color(0xFF9C241C)),
-            SizedBox(height: 16),
-            Text('Cargando aulas...'),
-          ],
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Color(0xFF9C241C)),
+              SizedBox(height: 20),
+              Text('Cargando...'),
+            ],
+          ),
         ),
       );
     }
+
     if (_hasError) {
-      return ListView(
-        children: [
-          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-          Center(
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.wifi_off, size: 60, color: Colors.grey),
-                const SizedBox(height: 16),
+                Icon(Icons.wifi_off_rounded, size: 80, color: Colors.grey[400]),
+                const SizedBox(height: 24),
                 const Text(
-                  'Error de conexión',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'Error de Conexión',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
-                const Text(
-                  'No se pudieron cargar los datos. Desliza para reintentar.',
+                const SizedBox(height: 8),
+                Text(
+                  'No se pudieron cargar los datos. Por favor, revisa tu conexión a internet y vuelve a intentarlo.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
                 ElevatedButton.icon(
                   onPressed: _loadInitialData,
                   icon: const Icon(Icons.refresh),
@@ -232,20 +217,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF9C241C),
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 15,
+                    ),
+                    textStyle: const TextStyle(fontSize: 16),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       );
     }
-    return HomeContent(aulasMostradas: _aulasMostradas);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: null,
+        toolbarHeight: 171,
+        flexibleSpace: _buildHeader(context),
+        backgroundColor: const Color(0xFF9C241C),
+      ),
+      backgroundColor: Colors.white,
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        color: const Color(0xFF9C241C),
+        child: HomeContent(aulasMostradas: _aulasMostradas),
+      ),
+      floatingActionButton: (_currentUser?.nombre_departamento != 'Guest')
+          ? FloatingActionButton(
+              onPressed: () async {
+                final String? qrCode = await Navigator.push<String>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const QrScannerScreen(),
+                  ),
+                );
+                if (qrCode != null && qrCode.isNotEmpty) {
+                  _searchController.text = qrCode;
+                }
+              },
+              backgroundColor: const Color(0xFF9C241C),
+              child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+            )
+          : null,
+    );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 40, 16, 12),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF9C241C), Color(0xFFBF2E24)],
@@ -277,39 +298,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              (_currentUser?.nombre_departamento != 'Guest')
-                  ? Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.person_outline,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        onPressed: () {
-                          if (_currentUser != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ProfileScreen(user: _currentUser!),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    )
-                  : TextButton(
-                      onPressed: () {
-                        Navigator.push(
+              (_currentUser?.nombre_departamento == 'Guest')
+                  ? TextButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const LoginScreen(),
                           ),
                         );
+                        if (result == true) {
+                          await _loadInitialData();
+                        }
                       },
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
@@ -325,6 +325,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: const Text(
                         'Iniciar Sesión',
                         style: TextStyle(fontSize: 12),
+                      ),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.person_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        onPressed: () async {
+                          if (_currentUser != null) {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProfileScreen(user: _currentUser!),
+                              ),
+                            );
+                            if (result == true) {
+                              await _loadInitialData();
+                            }
+                          }
+                        },
                       ),
                     ),
             ],

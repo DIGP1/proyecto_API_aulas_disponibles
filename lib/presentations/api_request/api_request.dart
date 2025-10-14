@@ -46,38 +46,42 @@ class ApiRequest {
   // --- Login como Invitado ---
   Future<User?> loginAsGuest() async {
     try {
-      final response = await client.post(
-        Uri.parse('${baseUrl}login-as-guest'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      final response = await client
+          .post(
+            Uri.parse('${baseUrl}login-as-guest'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 5));
+
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
         return User.fromJson(data);
       } else {
         print("Error en login como invitado. Código: ${response.statusCode}");
-        return null;
+        throw Exception('Error en login como invitado: ${response.statusCode}');
       }
     } catch (e) {
       print("Excepción en login como invitado: $e");
-      return null;
+      rethrow;
     }
   }
 
   Future<List<Aula>> getAllClassrooms(String? token) async {
-    // Verificación para asegurar que no se haga la llamada sin token
     if (token == null || token.isEmpty) {
       print("Error: No se puede obtener aulas sin un token de autenticación.");
       return [];
     }
 
     try {
-      final response = await client.get(
-        Uri.parse('${baseUrl}classrooms/get/all'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await client
+          .get(
+            Uri.parse('${baseUrl}classrooms/get/all'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
@@ -88,16 +92,19 @@ class ApiRequest {
         return [];
       } else {
         print("Error al obtener aulas. Código: ${response.statusCode}");
-        print("Cuerpo de la respuesta: ${response.body}");
-        return [];
+        throw Exception('Error al obtener aulas: ${response.statusCode}');
       }
     } catch (e) {
       print("Excepción al obtener aulas: $e");
-      return [];
+      rethrow;
     }
   }
 
-  Future<Aula?> getClassroomById(int id, String? token) async {
+  Future<Aula?> getClassroomById(
+    int id,
+    String? token,
+    BuildContext context,
+  ) async {
     if (token == null || token.isEmpty) {
       print(
         "Error: No se puede obtener el aula sin un token de autenticación.",
@@ -106,13 +113,15 @@ class ApiRequest {
     }
 
     try {
-      final response = await client.get(
-        Uri.parse('${baseUrl}classrooms/get/$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await client
+          .get(
+            Uri.parse('${baseUrl}classrooms/get/$id'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
@@ -126,11 +135,52 @@ class ApiRequest {
           "Error al obtener el aula por ID. Código: ${response.statusCode}",
         );
         print("Cuerpo de la respuesta: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al cargar la información del aula'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return null;
       }
     } catch (e) {
       print("Excepción al obtener el aula por ID: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al cargar la información del aula'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return null;
+    }
+  }
+
+  Future<bool> logout(String? token) async {
+    if (token == null || token.isEmpty) {
+      print("Error: No se puede cerrar sesión sin un token de autenticación.");
+      return false;
+    }
+
+    try {
+      final response = await client.post(
+        Uri.parse('${baseUrl}logout'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print("Sesión cerrada exitosamente.");
+        return true;
+      } else {
+        print("Error al cerrar sesión. Código: ${response.statusCode}");
+        print("Cuerpo de la respuesta: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Excepción al cerrar sesión: $e");
+      return false;
     }
   }
 }

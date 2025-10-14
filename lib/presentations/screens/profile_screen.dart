@@ -1,11 +1,22 @@
+import 'dart:convert';
+
+import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/screens/change_password_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User user;
 
-  const ProfileScreen({Key? key, required this.user}) : super(key: key);
+  ProfileScreen({Key? key, required this.user}) : super(key: key);
+
+  final ApiRequest _apiRequest = ApiRequest();
+
+  Future<void> _clearUserSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('currentUser');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,13 +119,44 @@ class ProfileScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
+                // --- MODIFICACIÓN: Lógica de onTap para cerrar sesión ---
                 _buildActionButton(
                   context,
                   icon: Icons.logout,
                   text: 'Cerrar Sesión',
                   color: Colors.red.shade700,
-                  onTap: () {
-                    _showLogoutConfirmation(context);
+                  onTap: () async {
+                    final bool? confirmed = await _showLogoutConfirmation(
+                      context,
+                    );
+
+                    if (confirmed == true) {
+                      final bool apiLogoutSuccess = await _apiRequest.logout(
+                        user.token,
+                      );
+
+                      if (!context.mounted) return;
+
+                      if (apiLogoutSuccess) {
+                        await _clearUserSession();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Sesión cerrada exitosamente.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.of(context).pop(true);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Error al cerrar sesión. Intente más tarde.',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
               ],
@@ -153,8 +195,8 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showLogoutConfirmation(BuildContext context) {
-    showDialog(
+  Future<bool?> _showLogoutConfirmation(BuildContext context) {
+    return showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -164,7 +206,8 @@ class ProfileScreen extends StatelessWidget {
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop();
+                // Cierra el diálogo y devuelve 'false'
+                Navigator.of(context).pop(false);
               },
             ),
             TextButton(
@@ -173,13 +216,8 @@ class ProfileScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.red),
               ),
               onPressed: () {
-                // Aquí iría la lógica para cerrar sesión (limpiar token, etc.)
-                Navigator.of(context).pop(); // Cierra el diálogo
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sesión cerrada exitosamente.')),
-                );
-                // Opcional: Navegar a la pantalla de login
-                // Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginScreen()), (Route<dynamic> route) => false);
+                // Cierra el diálogo y devuelve 'true'
+                Navigator.of(context).pop(true);
               },
             ),
           ],
