@@ -125,6 +125,7 @@ class ApiRequest {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
+        print("respuesta de obtener aula por id: $decodedData");
         if (decodedData.containsKey('data') && decodedData['data'] is Map) {
           final Map<String, dynamic> aulaJson = decodedData['data'];
           return Aula.fromJson(aulaJson);
@@ -152,6 +153,119 @@ class ApiRequest {
         ),
       );
       return null;
+    }
+  }
+
+  Future<Aula?> getClassroomByQrCode(
+    String? _qrCode,
+    String? token,
+    BuildContext context,
+  ) async {
+    if (token == null || token.isEmpty) {
+      print(
+        "Error: No se puede obtener el aula sin un token de autenticación.",
+      );
+      return null;
+    }
+
+    try {
+      final response = await client
+          .get(
+            Uri.parse('${baseUrl}classrooms/get/qr/$_qrCode'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decodedData = jsonDecode(response.body);
+        print("respuesta de obtener aula por id: $decodedData");
+        if (decodedData.containsKey('data') && decodedData['data'] is Map) {
+          final Map<String, dynamic> aulaJson = decodedData['data'];
+          return Aula.fromJson(aulaJson);
+        }
+        return null;
+      } else {
+        print(
+          "Error al obtener el aula por ID. Código: ${response.statusCode}",
+        );
+        print("Cuerpo de la respuesta: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al cargar la información del aula'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return null;
+      }
+    } catch (e) {
+      print("Excepción al obtener el aula por ID: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al cargar la información del aula'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<bool> changeClassroomStatus(
+    int classroomId,
+    String estado,
+    String? token,
+    BuildContext context,
+  ) async {
+    if (token == null || token.isEmpty) {
+      print(
+        "Error: No se puede cambiar el estado sin un token de autenticación.",
+      );
+      return false;
+    }
+
+    try {
+      final response = await client
+          .patch(
+            Uri.parse('${baseUrl}classrooms/change-status/$classroomId'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'estado': estado}),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        print("Estado del aula cambiado exitosamente.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Estado del aula actualizado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return true;
+      } else {
+        print("Error al cambiar el estado. Código: ${response.statusCode}");
+        print("Cuerpo de la respuesta: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al actualizar el estado del aula'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      print("Excepción al cambiar el estado: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error de conexión al actualizar el estado'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
     }
   }
 

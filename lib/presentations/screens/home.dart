@@ -244,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: const Color(0xFF9C241C),
         child: HomeContent(aulasMostradas: _aulasMostradas),
       ),
-      floatingActionButton: (_currentUser?.nombre_departamento != 'Guest')
+      floatingActionButton: (_currentUser?.nombre_role != 'Invitado')
           ? FloatingActionButton(
               onPressed: () async {
                 final String? qrCode = await Navigator.push<String>(
@@ -254,7 +254,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
                 if (qrCode != null && qrCode.isNotEmpty) {
-                  _searchController.text = qrCode;
+                  try {
+                    Aula? aula = await _apiRequest.getClassroomByQrCode(
+                      qrCode,
+                      _currentUser!.token,
+                      context,
+                    );
+                    if (!mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ClassroomDetailScreen(aula: aula!),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Error: No se pudo obtener el aula del código QR',
+                        ),
+                      ),
+                    );
+                  }
                 }
               },
               backgroundColor: const Color(0xFF9C241C),
@@ -298,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              (_currentUser?.nombre_departamento == 'Guest')
+              (_currentUser?.nombre_role == 'Invitado')
                   ? TextButton(
                       onPressed: () async {
                         final result = await Navigator.push(
@@ -412,105 +435,110 @@ class HomeContent extends StatelessWidget {
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8),
-      itemCount: aulasMostradas.length,
-      itemBuilder: (context, index) {
-        final aula = aulasMostradas[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ClassroomDetailScreen(aula: aula),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+    return SafeArea(
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 8),
+        itemCount: aulasMostradas.length,
+        itemBuilder: (context, index) {
+          final aula = aulasMostradas[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ClassroomDetailScreen(aula: aula),
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9C241C).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9C241C).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.class_outlined,
+                          color: Color(0xFF9C241C),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.class_outlined,
-                        color: Color(0xFF9C241C),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  aula.nombre,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    aula.nombre,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildAulaStatusTag(aula.estado),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _buildInfoRow(
-                            Icons.location_on_outlined,
-                            aula.ubicacion,
-                          ),
-                          const SizedBox(height: 4),
-                          _buildInfoRow(
-                            Icons.people_alt_outlined,
-                            '${aula.capacidadPupitres} pupitres',
-                          ),
-                        ],
+                                const SizedBox(width: 8),
+                                _buildAulaStatusTag(aula.estado),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                              Icons.location_on_outlined,
+                              aula.ubicacion,
+                            ),
+                            const SizedBox(height: 4),
+                            _buildInfoRow(
+                              Icons.people_alt_outlined,
+                              '${aula.capacidadPupitres} pupitres',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (aula.recursos.isNotEmpty) ...[
+                    const Divider(height: 24, thickness: 1),
+                    const Text(
+                      'Recursos del Aula:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    ...aula.recursos
+                        .map((recurso) => _buildResourceRow(recurso))
+                        .toList(),
                   ],
-                ),
-                if (aula.recursos.isNotEmpty) ...[
-                  const Divider(height: 24, thickness: 1),
-                  const Text(
-                    'Recursos del Aula:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  ...aula.recursos
-                      .map((recurso) => _buildResourceRow(recurso))
-                      .toList(),
                 ],
-              ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
