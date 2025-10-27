@@ -45,7 +45,14 @@ class Aula {
         .map((r) => ClassroomResources.fromJson(r))
         .toList();
     final List<dynamic> imagesJson = json['fotos'] ?? [];
-    List<String> imagesList = imagesJson.map((i) => i.toString()).toList();
+    List<String> imagesList = imagesJson
+        .map(
+          (i) => i is Map<String, dynamic>
+              ? i['url']?.toString() ?? ''
+              : i.toString(),
+        )
+        .where((url) => url.isNotEmpty)
+        .toList();
 
     // Si la lista de imágenes está vacía, añadimos placeholders
     if (imagesList.isEmpty) {

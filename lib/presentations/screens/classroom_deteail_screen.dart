@@ -565,11 +565,12 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
               onTap: () => _openImageGallery(index),
               child: Hero(
                 tag: imageUrl,
-                child: SizedBox(
+                child: Container(
                   width: MediaQuery.of(context).size.width,
+                  color: Colors.black,
                   child: Image.network(
                     imageUrl,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
                       return const Center(child: CircularProgressIndicator());
@@ -781,33 +782,42 @@ class _FullScreenImageGalleryState extends State<FullScreenImageGallery> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          '${_currentIndex + 1} / ${widget.images.length}',
-          style: const TextStyle(color: Colors.white),
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        if (details.primaryVelocity != null &&
+            details.primaryVelocity!.abs() > 100) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: Text(
+            '${_currentIndex + 1} / ${widget.images.length}',
+            style: const TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
-      body: PhotoViewGallery.builder(
-        pageController: _pageController,
-        itemCount: widget.images.length,
-        onPageChanged: onPageChanged,
-        builder: (context, index) {
-          final imageUrl = widget.images[index];
-          return PhotoViewGalleryPageOptions(
-            imageProvider: NetworkImage(imageUrl),
-            minScale: PhotoViewComputedScale.contained,
-            maxScale: PhotoViewComputedScale.covered * 2,
-            heroAttributes: PhotoViewHeroAttributes(tag: imageUrl),
-          );
-        },
-        loadingBuilder: (context, event) =>
-            const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: PhotoViewGallery.builder(
+          pageController: _pageController,
+          itemCount: widget.images.length,
+          onPageChanged: onPageChanged,
+          builder: (context, index) {
+            final imageUrl = widget.images[index];
+            return PhotoViewGalleryPageOptions(
+              imageProvider: NetworkImage(imageUrl),
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.covered * 2,
+              heroAttributes: PhotoViewHeroAttributes(tag: imageUrl),
+            );
+          },
+          loadingBuilder: (context, event) => const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
+        ),
       ),
     );
   }
