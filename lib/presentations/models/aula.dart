@@ -12,6 +12,8 @@ class Aula {
   final String updatedAt;
   final List<ClassroomResources> recursos;
   final List<String> images;
+  final double? latitud;
+  final double? longitud;
 
   Aula({
     required this.id,
@@ -25,7 +27,17 @@ class Aula {
     required this.updatedAt,
     required this.recursos,
     required this.images,
+    required this.latitud,
+    required this.longitud,
   });
+
+  static double? parseToDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
 
   factory Aula.fromJson(Map<String, dynamic> json) {
     final List<dynamic> recursosJson = json['recursos'] ?? [];
@@ -56,6 +68,8 @@ class Aula {
       updatedAt: json['updated_at'] ?? '',
       recursos: recursosList,
       images: imagesList,
+      latitud: parseToDouble(json['latitud']),
+      longitud: parseToDouble(json['longitud']),
     );
   }
 }

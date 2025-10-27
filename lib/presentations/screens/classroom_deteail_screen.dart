@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:aulas_disponibles/config/constants.dart';
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/aula.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class ClassroomDetailScreen extends StatefulWidget {
   final Aula aula;
@@ -25,7 +28,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
   final CarouselSliderController _carouselController =
       CarouselSliderController();
 
-  // --- NUEVO: Estado para la reserva actual del usuario ---
   int? _reservedClassroomId;
   String? _reservedClassroomName;
 
@@ -36,7 +38,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     _loadLocalData();
   }
 
-  // --- MODIFICADO: Carga tanto el usuario como la reserva guardada ---
   Future<void> _loadLocalData() async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString('currentUser');
@@ -51,7 +52,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     });
   }
 
-  // --- NUEVO: Guardar la reserva en SharedPreferences ---
   Future<void> _saveReservation(int id, String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('reservedClassroomId', id);
@@ -63,7 +63,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     });
   }
 
-  // --- NUEVO: Limpiar la reserva de SharedPreferences ---
   Future<void> _clearReservation() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('reservedClassroomId');
@@ -89,9 +88,9 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     }
   }
 
-  // --- NUEVO: Lógica central para manejar el botón de reserva/desocupar ---
   Future<void> _handleReservationLogic() async {
-    // Escenario 1: El usuario ya tiene reservada ESTA aula
+    if (_currentUser?.token == null) return;
+
     if (_reservedClassroomId == _currentAula.id) {
       final confirmed = await _showConfirmationDialog(
         title: 'Desocupar Aula',
@@ -114,7 +113,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
       return;
     }
 
-    // Escenario 2: El usuario tiene OTRA aula reservada
     if (_reservedClassroomId != null) {
       final confirmed = await _showConfirmationDialog(
         title: 'Cambiar Reserva',
@@ -123,7 +121,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
         confirmText: 'Sí, Cambiar',
       );
       if (confirmed == true) {
-        // Desocupa la antigua y luego reserva la nueva
         final oldSuccess = await _apiRequest.changeClassroomStatus(
           _reservedClassroomId!,
           'disponible',
@@ -146,7 +143,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
       return;
     }
 
-    // Escenario 3: El usuario no tiene ninguna aula reservada
     if (_currentAula.estado.toLowerCase() == 'disponible') {
       final confirmed = await _showConfirmationDialog(
         title: 'Reservar Aula',
@@ -168,7 +164,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     }
   }
 
-  // --- NUEVO: Widget de diálogo reutilizable ---
   Future<bool?> _showConfirmationDialog({
     required String title,
     required String content,
@@ -231,9 +226,27 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     );
   }
 
+  Future<void> _launchMapsApp(double lat, double lon) async {
+    final Uri googleMapsUrl = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
+    );
+    final Uri appleMapsUrl = Uri.parse('https://maps.apple.com/?q=$lat,$lon');
+
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl);
+    } else if (await canLaunchUrl(appleMapsUrl)) {
+      await launchUrl(appleMapsUrl);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo abrir la aplicación de mapas'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // --- MODIFICACIÓN: Lógica para el texto y estado del botón ---
     String buttonText = 'Estado Desconocido';
     bool isButtonEnabled = false;
     Color buttonColor = Colors.grey;
@@ -363,6 +376,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
                             ),
                           ),
                         ),
+                        _buildMapPreview(),
                         const SizedBox(height: 24),
                         Text(
                           'Recursos del Aula',
@@ -456,7 +470,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
             ),
           ),
         ),
-        // --- MODIFICACIÓN: Lógica del Bottom Navigation Bar ---
         bottomNavigationBar: _currentUser?.nombre_role != 'Invitado'
             ? SafeArea(
                 child: Padding(
@@ -481,6 +494,61 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
               )
             : null,
       ),
+    );
+  }
+
+  Widget _buildMapPreview() {
+    final lat = _currentAula.latitud;
+    final lon = _currentAula.longitud;
+
+    if (lat == null || lon == null) {
+      return const SizedBox.shrink();
+    }
+
+    // --- MODIFICACIÓN: Reemplazar todo el widget con GoogleMap ---
+    final LatLng initialPosition = LatLng(lat, lon);
+    final Set<Marker> markers = {
+      Marker(
+        markerId: MarkerId(_currentAula.id.toString()),
+        position: initialPosition,
+        infoWindow: InfoWindow(
+          title: _currentAula.nombre,
+          snippet: _currentAula.ubicacion,
+        ),
+      ),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Text(
+          'Ubicación en el Mapa',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 250, // Define una altura para el contenedor del mapa
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: initialPosition,
+                zoom: 17.0, // Nivel de zoom inicial
+              ),
+              markers: markers,
+              onTap: (_) => _launchMapsApp(
+                lat,
+                lon,
+              ), // Permite abrir la app de mapas al tocar
+              mapType: MapType.normal,
+              myLocationButtonEnabled:
+                  false, // Opcional: oculta el botón de "mi ubicación"
+              zoomControlsEnabled:
+                  true, // Muestra los controles de zoom nativos
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -565,7 +633,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     String text;
     IconData icon;
 
-    // --- MODIFICACIÓN: Si el aula está reservada por el usuario, se muestra como "Ocupada (Por ti)" ---
     if (_reservedClassroomId == _currentAula.id) {
       status = 'ocupada';
     }
