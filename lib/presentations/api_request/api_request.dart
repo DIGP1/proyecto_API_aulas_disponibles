@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ApiRequest {
-  static const String baseUrl = 'http://192.168.31.9:8000/api/';
+  static const String baseUrl = 'https://sica.creativetools.space/api/';
   final http.Client client;
   ApiRequest({http.Client? client}) : client = client ?? http.Client();
 
