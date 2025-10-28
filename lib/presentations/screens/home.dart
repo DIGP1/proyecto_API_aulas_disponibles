@@ -261,6 +261,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                     );
                     if (!mounted) return;
+                    if(aula == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Aula no encontrada para el código QR escaneado. o intente nuevamente.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(
