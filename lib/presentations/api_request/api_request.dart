@@ -421,4 +421,33 @@ class ApiRequest {
       return false;
     }
   }
+  Future<bool> expireToken(String? token) async {
+    print(token);
+    if (token == null || token.isEmpty) {
+      print("Error: No se puede expirar el token sin un token de autenticación.");
+      return false;
+    }
+
+    try {
+      final response = await client.post(
+        Uri.parse('${baseUrl}testing/expire-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print("Token expirado para pruebas.");
+        return true;
+      } else {
+        print("Error al expirar el token. Código: ${response.statusCode}");
+        print("Cuerpo de la respuesta: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Excepción al expirar el token: $e");
+      return false;
+    }
+  }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
@@ -85,12 +86,37 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         throw Exception('No se pudo obtener un token de autenticación.');
       }
-    } catch (e) {
-      print("Error en _loadInitialData: $e");
+    } on TimeoutException catch (e) {
+      print("TimeoutException en _loadInitialData: $e");
       if (!mounted) return;
       setState(() {
-        _hasError = true;
-        _isLoading = false;
+      _hasError = true;
+      _isLoading = false;
+      });
+    } on FormatException catch (e) {
+
+      print("FormatException en _loadInitialData: $e");
+      if (!mounted) return;
+      setState(() async{
+        if(_currentUser?.nombre_role != 'Invitado'){
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Las credenciales han expirado. Inicie sesión nuevamente.')),
+          );
+        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('currentUser');
+        if(mounted){
+          _loadInitialData();
+        }
+        
+      });
+    } catch (e) {
+      // Captura cualquier otra excepción no manejada anteriormente.
+      print("Error genérico en _loadInitialData: $e");
+      if (!mounted) return;
+      setState(() {
+      _hasError = true;
+      _isLoading = false;
       });
     }
   }
@@ -113,10 +139,38 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         await _loadInitialData();
       }
+    } on TimeoutException catch (e) {
+      print("TimeoutException en _loadInitialData: $e");
+      if (!mounted) return;
+      setState(() {
+      _hasError = true;
+      _isLoading = false;
+      });
+    } on FormatException catch (e) {
+
+      print("FormatException en _loadInitialData: $e");
+      if (!mounted) return;
+      setState(() async{
+        if(_currentUser?.nombre_role != 'Invitado'){
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Las credenciales han expirado. Inicie sesión nuevamente.')),
+          );
+        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('currentUser');
+        if(mounted){
+          _loadInitialData();
+        }
+        
+      });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al refrescar. Intente más tarde.')),
-      );
+      // Captura cualquier otra excepción no manejada anteriormente.
+      print("Error genérico en _loadInitialData: $e");
+      if (!mounted) return;
+      setState(() {
+      _hasError = true;
+      _isLoading = false;
+      });
     }
   }
 
@@ -234,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: null,
-        toolbarHeight: 171,
+        toolbarHeight: 220,
         flexibleSpace: _buildHeader(context),
         backgroundColor: const Color(0xFF9C241C),
       ),
@@ -275,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                            ClassroomDetailScreen(aula: aula!),
+                            ClassroomDetailScreen(aula: aula),
                       ),
                     );
                   } catch (e) {
@@ -331,6 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
+              
               (_currentUser?.nombre_role == 'Invitado')
                   ? TextButton(
                       onPressed: () async {
@@ -422,6 +477,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          TextButton(onPressed: () async{
+              final prefs = await SharedPreferences.getInstance();
+              
+              bool expired = await _apiRequest.expireToken(_currentUser!.token);
+              if(expired) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Token expirado correctamente.'),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error al expirar el token.'),
+                  ),
+                );
+              }},
+               child: Text("Token" , style: TextStyle(color: Colors.white, fontSize: 12))
+            ),
         ],
       ),
     );
