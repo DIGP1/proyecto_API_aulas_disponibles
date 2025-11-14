@@ -1,4 +1,6 @@
+import 'package:aulas_disponibles/presentations/screens/authentication_screens/forgot_passwords_screens/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({Key? key}) : super(key: key);
@@ -44,6 +46,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final secondaryTextColor = const Color(0xFF6D6767);
     return GestureDetector(
       onHorizontalDragEnd: (DragEndDetails details) {
         if (details.primaryVelocity != null && details.primaryVelocity! > 100) {
@@ -116,6 +119,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       }
                       return null;
                     },
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                            const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: GoogleFonts.interTight(
+                        color: secondaryTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton(

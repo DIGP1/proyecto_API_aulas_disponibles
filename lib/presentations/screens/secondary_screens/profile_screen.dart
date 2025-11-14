@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
-import 'package:aulas_disponibles/presentations/screens/change_password_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/authentication_screens/change_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

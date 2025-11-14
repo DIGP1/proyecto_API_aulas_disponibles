@@ -1,4 +1,4 @@
-import 'package:aulas_disponibles/presentations/screens/qr_scanner_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/secondary_screens/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {

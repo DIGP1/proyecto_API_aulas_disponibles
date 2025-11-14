@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/models/user_login.dart';
+import 'package:aulas_disponibles/presentations/screens/authentication_screens/forgot_passwords_screens/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:aulas_disponibles/presentations/screens/register_screen.dart';
+import 'package:aulas_disponibles/presentations/screens/authentication_screens/register_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -310,8 +311,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                print(
-                                  "Boton olvidaste tu contraseña presionado",
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
                                 );
                               },
                               child: Text(

@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ApiRequest {
-  static const String baseUrl = 'https://sica.creativetools.space/api/';
+  //https://sica.creativetools.space/api/
+  static const String baseUrl = 'http://192.168.31.8:8000/api/';
   final http.Client client;
   ApiRequest({http.Client? client}) : client = client ?? http.Client();
 
@@ -294,6 +295,129 @@ class ApiRequest {
       }
     } catch (e) {
       print("Excepción al cerrar sesión: $e");
+      return false;
+    }
+  }
+  Future<bool> forgotPassword(String email, BuildContext context) async {
+    try {
+      final response = await client.post(
+        Uri.parse('${baseUrl}forgot-password-mobile'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Se ha enviado un correo para restablecer tu contraseña.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return true;
+      } else {
+        final responseData = jsonDecode(response.body);
+        final message = responseData['message'] ??
+            'No se pudo enviar el correo de recuperación.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error de conexión. Revisa tu internet.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+  }
+  Future<String?> verifyResetCode(
+      String email, String code, BuildContext context) async {
+    try {
+      final response = await client.post(
+        Uri.parse('${baseUrl}verify-reset-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'code': code}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final token = responseData['token'] as String?;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Código verificado correctamente.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return token;
+      } else {
+        final responseData = jsonDecode(response.body);
+        final message =
+            responseData['message'] ?? 'El código de verificación es incorrecto.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return null;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error de conexión. Revisa tu internet.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
+  }
+  Future<bool> resetPassword(String email,String token,String password,String passwordConfirmation,BuildContext context) async {
+    try {
+      final response = await client.post(
+        Uri.parse('${baseUrl}reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'token': token,
+          'password': password,
+          'password_confirmation': passwordConfirmation,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contraseña restablecida exitosamente.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return true;
+      } else {
+        final responseData = jsonDecode(response.body);
+        final message =
+            responseData['message'] ?? 'Error al restablecer la contraseña.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error de conexión. Revisa tu internet.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return false;
     }
   }
