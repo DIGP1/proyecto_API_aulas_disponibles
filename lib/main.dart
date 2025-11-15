@@ -1,4 +1,4 @@
-import 'package:aulas_disponibles/presentations/screens/home.dart';
+import 'package:SICA/presentations/screens/home.dart';
 import 'package:flutter/material.dart';
 
 void main() {

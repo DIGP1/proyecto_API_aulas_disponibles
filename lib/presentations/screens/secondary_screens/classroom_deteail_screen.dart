@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'package:aulas_disponibles/config/constants.dart';
-import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
-import 'package:aulas_disponibles/presentations/models/aula.dart';
-import 'package:aulas_disponibles/presentations/models/user.dart';
-import 'package:aulas_disponibles/presentations/screens/secondary_screens/report_problem_screen.dart';
+//import 'package:SICA/config/constants.dart';
+import 'package:SICA/presentations/api_request/api_request.dart';
+import 'package:SICA/presentations/models/aula.dart';
+import 'package:SICA/presentations/models/user.dart';
+import 'package:SICA/presentations/screens/secondary_screens/report_problem_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';

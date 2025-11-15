@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
-import 'package:aulas_disponibles/presentations/models/aula.dart';
-import 'package:aulas_disponibles/presentations/models/classroom_resources.dart';
-import 'package:aulas_disponibles/presentations/models/user.dart';
-import 'package:aulas_disponibles/presentations/screens/secondary_screens/classroom_deteail_screen.dart';
-import 'package:aulas_disponibles/presentations/screens/authentication_screens/login_screen.dart';
-import 'package:aulas_disponibles/presentations/screens/secondary_screens/profile_screen.dart';
-import 'package:aulas_disponibles/presentations/screens/secondary_screens/qr_scanner_screen.dart';
+import 'package:SICA/presentations/api_request/api_request.dart';
+import 'package:SICA/presentations/models/aula.dart';
+import 'package:SICA/presentations/models/classroom_resources.dart';
+import 'package:SICA/presentations/models/user.dart';
+import 'package:SICA/presentations/screens/secondary_screens/classroom_deteail_screen.dart';
+import 'package:SICA/presentations/screens/authentication_screens/login_screen.dart';
+import 'package:SICA/presentations/screens/secondary_screens/profile_screen.dart';
+import 'package:SICA/presentations/screens/secondary_screens/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

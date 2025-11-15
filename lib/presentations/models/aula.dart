@@ -1,4 +1,4 @@
-import 'package:aulas_disponibles/presentations/models/classroom_resources.dart';
+import 'package:SICA/presentations/models/classroom_resources.dart';
 
 class Aula {
   final int id;

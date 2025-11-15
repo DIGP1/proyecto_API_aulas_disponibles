@@ -1,5 +1,5 @@
-import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
-import 'package:aulas_disponibles/presentations/screens/authentication_screens/forgot_passwords_screens/verify_code_screen.dart';
+import 'package:SICA/presentations/api_request/api_request.dart';
+import 'package:SICA/presentations/screens/authentication_screens/forgot_passwords_screens/verify_code_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

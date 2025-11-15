@@ -1,7 +1,7 @@
 
 import 'dart:io';
-import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
-import 'package:aulas_disponibles/presentations/models/aula.dart';
+import 'package:SICA/presentations/api_request/api_request.dart';
+import 'package:SICA/presentations/models/aula.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';

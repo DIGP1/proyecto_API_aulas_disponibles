@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:aulas_disponibles/presentations/models/aula.dart';
-import 'package:aulas_disponibles/presentations/models/user.dart';
-import 'package:aulas_disponibles/presentations/models/user_login.dart';
-import 'package:aulas_disponibles/presentations/screens/secondary_screens/report_problem_screen.dart';
+import 'package:SICA/presentations/models/aula.dart';
+import 'package:SICA/presentations/models/user.dart';
+import 'package:SICA/presentations/models/user_login.dart';
+import 'package:SICA/presentations/screens/secondary_screens/report_problem_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 class ApiRequest {
   //https://sica.creativetools.space/api/
-  static const String baseUrl = 'http://192.168.31.8:8000/api/';
+  static const String baseUrl = 'https://sica.creativetools.space/api/';
   final http.Client client;
   ApiRequest({http.Client? client}) : client = client ?? http.Client();
 
@@ -583,6 +583,7 @@ class ApiRequest {
         return true;
       } else {
         final responseData = jsonDecode(response.body);
+        print("Error al enviar el reporte: ${responseData}");
         final message = responseData['message'] ?? 'Error al enviar el reporte.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -593,6 +594,7 @@ class ApiRequest {
         return false;
       }
     } catch (e) {
+      print("Excepción al enviar el reporte: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error de conexión: $e'),
