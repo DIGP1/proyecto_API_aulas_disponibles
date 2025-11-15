@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="aulas_disponibles"
+        android:label="SICA"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <meta-data 
