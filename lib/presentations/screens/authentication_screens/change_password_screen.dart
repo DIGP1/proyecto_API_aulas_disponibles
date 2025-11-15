@@ -1,6 +1,11 @@
+import 'dart:convert';
+
+import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
+import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/screens/authentication_screens/forgot_passwords_screens/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({Key? key}) : super(key: key);
@@ -14,6 +19,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final ApiRequest _apiRequest = ApiRequest();
 
   bool _isCurrentPasswordVisible = false;
   bool _isNewPasswordVisible = false;
@@ -27,20 +33,27 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Aquí iría la lógica para llamar a la API y cambiar la contraseña
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Cambiando contraseña...')));
-      // Simula una llamada a la API y regresa
-      Future.delayed(const Duration(seconds: 2), () {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('currentUser');
+
+      if (userJson != null) {
+        final _currentUser = User.fromJson(jsonDecode(userJson));
+        bool passwordChanged = await _apiRequest.changePassword(_currentPasswordController.text,
+        _newPasswordController.text, _confirmPasswordController.text, _currentUser.token, context);
+        if (passwordChanged) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Contraseña cambiada exitosamente, hemos cerrado tus otras sesiones por seguridad.')),
+          );
+          Navigator.of(context).pop();
+        }
+      }
+      else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contraseña cambiada exitosamente.')),
+          const SnackBar(content: Text('Error al obtener la información del usuario')),
         );
-        Navigator.of(context).pop();
-      });
+      }
     }
   }
 
@@ -90,36 +103,54 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             !_isCurrentPasswordVisible,
                       );
                     },
-                  ),
-                  const SizedBox(height: 20),
-                  _buildPasswordField(
+                    ),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(
                     controller: _newPasswordController,
                     label: 'Nueva Contraseña',
                     isVisible: _isNewPasswordVisible,
                     toggleVisibility: () {
                       setState(
-                        () => _isNewPasswordVisible = !_isNewPasswordVisible,
+                      () => _isNewPasswordVisible = !_isNewPasswordVisible,
                       );
                     },
-                  ),
-                  const SizedBox(height: 20),
-                  _buildPasswordField(
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                      return 'Este campo no puede estar vacío';
+                      }
+                      if (!value.contains(RegExp(r'[A-Z]'))) {
+                      return 'Debe contener minimo una mayúscula.';
+                      }
+                      if (value.replaceAll(RegExp(r'[^0-9]'), '').length < 2) {
+                      return 'Debe contener minimo dos números.';
+                      }
+                      if (value
+                          .replaceAll(RegExp(r'[a-zA-Z0-9]'), '')
+                          .length <
+                        2) {
+                      return 'Debe contener minimo dos caracteres especiales.';
+                      }
+                      return null;
+                    },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(
                     controller: _confirmPasswordController,
                     label: 'Confirmar Nueva Contraseña',
                     isVisible: _isConfirmPasswordVisible,
                     toggleVisibility: () {
                       setState(
-                        () => _isConfirmPasswordVisible =
-                            !_isConfirmPasswordVisible,
+                      () => _isConfirmPasswordVisible =
+                        !_isConfirmPasswordVisible,
                       );
                     },
                     validator: (value) {
                       if (value != _newPasswordController.text) {
-                        return 'Las contraseñas no coinciden';
+                      return 'Las contraseñas no coinciden';
                       }
                       return null;
                     },
-                  ),
+                    ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(

@@ -3,6 +3,7 @@ import 'package:aulas_disponibles/config/constants.dart';
 import 'package:aulas_disponibles/presentations/api_request/api_request.dart';
 import 'package:aulas_disponibles/presentations/models/aula.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
+import 'package:aulas_disponibles/presentations/screens/secondary_screens/report_problem_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
@@ -298,13 +299,22 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
             IconButton(
               icon: const Icon(Icons.flag_outlined, color: Colors.white),
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Reportar un problema con el ${_currentAula.nombre}...',
+                if (_currentUser != null) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ReportProblemScreen(
+                        aula: _currentAula,
+                        token: _currentUser!.token,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Debes iniciar sesión para reportar un problema.'),
+                    ),
+                  );
+                }
               },
             ),
           ],

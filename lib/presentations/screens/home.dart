@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: null,
-        toolbarHeight: 220,
+        toolbarHeight: 171,
         flexibleSpace: _buildHeader(context),
         backgroundColor: const Color(0xFF9C241C),
       ),
@@ -477,25 +477,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          TextButton(onPressed: () async{
-              final prefs = await SharedPreferences.getInstance();
-              
-              bool expired = await _apiRequest.expireToken(_currentUser!.token);
-              if(expired) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Token expirado correctamente.'),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Error al expirar el token.'),
-                  ),
-                );
-              }},
-               child: Text("Token" , style: TextStyle(color: Colors.white, fontSize: 12))
-            ),
         ],
       ),
     );

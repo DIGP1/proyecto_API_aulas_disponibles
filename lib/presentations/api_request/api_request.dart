@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:aulas_disponibles/presentations/models/aula.dart';
 import 'package:aulas_disponibles/presentations/models/user.dart';
 import 'package:aulas_disponibles/presentations/models/user_login.dart';
+import 'package:aulas_disponibles/presentations/screens/secondary_screens/report_problem_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class ApiRequest {
   //https://sica.creativetools.space/api/
@@ -52,7 +55,7 @@ class ApiRequest {
             Uri.parse('${baseUrl}login-as-guest'),
             headers: {'Content-Type': 'application/json'},
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
@@ -82,7 +85,7 @@ class ApiRequest {
               'Authorization': 'Bearer $token',
             },
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
@@ -122,7 +125,7 @@ class ApiRequest {
               'Authorization': 'Bearer $token',
             },
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
@@ -178,7 +181,7 @@ class ApiRequest {
               'Authorization': 'Bearer $token',
             },
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
@@ -236,7 +239,7 @@ class ApiRequest {
             },
             body: jsonEncode({'estado': estado}),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         print("Estado del aula cambiado exitosamente.");
@@ -450,4 +453,155 @@ class ApiRequest {
       return false;
     }
   }
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+    String passwordConfirmation,
+    String? token,
+    BuildContext context,
+  ) async {
+    if (token == null || token.isEmpty) {
+      print(
+        "Error: No se puede cambiar la contraseña sin un token de autenticación.",
+      );
+      return false;
+    }
+
+    try {
+      final response = await client.post(
+        Uri.parse('${baseUrl}change-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+          'new_password_confirmation': passwordConfirmation,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contraseña cambiada exitosamente.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return true;
+      } else {
+        final responseData = jsonDecode(response.body);
+        final message =
+            responseData['message'] ?? 'Error al cambiar la contraseña.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error de conexión. Revisa tu internet.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+  }
+  Future<List<ReportCategory>> getReportCategories(String? token) async {
+    if (token == null || token.isEmpty) {
+      print(
+          "Error: No se puede obtener las categorías sin un token de autenticación.");
+      return [];
+    }
+
+    try {
+      final response = await client.get(
+        Uri.parse('${baseUrl}classroom-reports/catalogs/categories'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decodedData = jsonDecode(response.body);
+        if (decodedData.containsKey('data') && decodedData['data'] is List) {
+          final List<dynamic> categoriesJson = decodedData['data'];
+          return categoriesJson
+              .map((json) => ReportCategory.fromJson(json))
+              .toList();
+        }
+        return [];
+      } else {
+        print(
+            "Error al obtener las categorías de reporte. Código: ${response.statusCode}");
+        return [];
+      }
+    } catch (e) {
+      print("Excepción al obtener las categorías de reporte: $e");
+      return [];
+    }
+  }
+
+  Future<bool> submitProblemReport({
+    required String token,
+    required int classroomId,
+    required String category,
+    required String description,
+    File? image,
+    required BuildContext context,
+  }) async {
+    try {
+      final uri = Uri.parse('${baseUrl}classroom-reports/new');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      request.fields['aula_id'] = classroomId.toString();
+      request.fields['categoria'] = category;
+      request.fields['descripcion'] = description;
+
+      if (image != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'foto_evidencia',
+            image.path,
+            contentType: MediaType('image', 'png'),
+          ),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return true;
+      } else {
+        final responseData = jsonDecode(response.body);
+        final message = responseData['message'] ?? 'Error al enviar el reporte.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error de conexión: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+  }
+
+
 }
