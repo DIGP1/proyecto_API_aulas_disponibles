@@ -44,19 +44,54 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
     final userJson = prefs.getString('currentUser');
 
     if (!mounted) return;
-    setState(() {
-      if (userJson != null) {
-        _currentUser = User.fromJson(jsonDecode(userJson));
+
+    User? currentUser;
+    if (userJson != null) {
+      currentUser = User.fromJson(jsonDecode(userJson));
+    }
+
+    // Cargar el mapa de reservas
+    final reservationsJson = prefs.getString('userReservations');
+    if (currentUser != null && reservationsJson != null) {
+      final Map<String, dynamic> reservationsMap = jsonDecode(reservationsJson);
+      final String userIdKey = currentUser.id.toString();
+
+      // Verificar si el usuario actual tiene una reserva guardada
+      if (reservationsMap.containsKey(userIdKey)) {
+        final userReservation = reservationsMap[userIdKey] as Map<String, dynamic>;
+        setState(() {
+          _currentUser = currentUser;
+          _reservedClassroomId = userReservation['id'];
+          _reservedClassroomName = userReservation['name'];
+        });
+        return; // Salir si se encontró la reserva
       }
-      _reservedClassroomId = prefs.getInt('reservedClassroomId');
-      _reservedClassroomName = prefs.getString('reservedClassroomName');
+    }
+
+    // Si no se encontró reserva o no hay usuario, establecer estado inicial
+    setState(() {
+      _currentUser = currentUser;
+      _reservedClassroomId = null;
+      _reservedClassroomName = null;
     });
   }
 
   Future<void> _saveReservation(int id, String name) async {
+    if (_currentUser == null) return;
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('reservedClassroomId', id);
-    await prefs.setString('reservedClassroomName', name);
+    final String userIdKey = _currentUser!.id.toString();
+
+    // Obtener el mapa existente o crear uno nuevo
+    final reservationsJson = prefs.getString('userReservations');
+    Map<String, dynamic> reservationsMap = reservationsJson != null ? jsonDecode(reservationsJson) : {};
+
+    // Añadir o actualizar la reserva para el usuario actual
+    reservationsMap[userIdKey] = {'id': id, 'name': name};
+
+    // Guardar el mapa actualizado como un string JSON
+    await prefs.setString('userReservations', jsonEncode(reservationsMap));
+
     if (!mounted) return;
     setState(() {
       _reservedClassroomId = id;
@@ -65,9 +100,24 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
   }
 
   Future<void> _clearReservation() async {
+    if (_currentUser == null) return;
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('reservedClassroomId');
-    await prefs.remove('reservedClassroomName');
+    final String userIdKey = _currentUser!.id.toString();
+
+    // Obtener el mapa existente
+    final reservationsJson = prefs.getString('userReservations');
+    if (reservationsJson == null) return; // No hay nada que limpiar
+
+    Map<String, dynamic> reservationsMap = jsonDecode(reservationsJson);
+
+    // Eliminar la reserva solo para el usuario actual
+    if (reservationsMap.containsKey(userIdKey)) {
+      reservationsMap.remove(userIdKey);
+      // Guardar el mapa actualizado
+      await prefs.setString('userReservations', jsonEncode(reservationsMap));
+    }
+
     if (!mounted) return;
     setState(() {
       _reservedClassroomId = null;
@@ -363,10 +413,32 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen> {
                                   _currentAula.codigo,
                                 ),
                                 const Divider(),
-                                _buildInfoRow(
-                                  Icons.location_on_outlined,
-                                  'Ubicación',
-                                  _currentAula.ubicacion,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.location_on_outlined, color: Colors.grey.shade600),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                      const Text(
+                                        'Ubicación:',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _currentAula.ubicacion,
+                                        textAlign: TextAlign.justify,
+                                        style: TextStyle(color: Colors.grey.shade800),
+                                      ),
+                                      ],
+                                    ),
+                                    ),
+                                  ],
+                                  ),
                                 ),
                                 const Divider(),
                                 _buildInfoRow(
